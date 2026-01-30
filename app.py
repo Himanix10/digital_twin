@@ -24,6 +24,29 @@ from models.linear_model import run_linear_regression
 from models.random_forest import run_random_forest
 from models.lstm_model import run_lstm
 from models.autoencoder import run_autoencoder
+
+# Compatibility helper for setting query params across Streamlit versions
+def set_query_params(**kwargs):
+    try:
+        # Prefer the newer API: assign to st.query_params when available
+        if hasattr(st, "query_params"):
+            qp = dict(st.query_params) if isinstance(st.query_params, dict) else dict(st.query_params)
+            # normalize values to lists of strings (query params are list-valued)
+            for k, v in kwargs.items():
+                qp[k] = [str(v)] if not isinstance(v, (list, tuple)) else [str(x) for x in v]
+            try:
+                st.query_params = qp
+                return
+            except Exception:
+                # fall through to experimental API if assignment fails
+                pass
+
+        # Fallback for older Streamlit versions
+        if hasattr(st, "experimental_set_query_params"):
+            st.experimental_set_query_params(**{k: v for k, v in kwargs.items()})
+    except Exception:
+        # best-effort; don't crash the app for query param updates
+        return
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -239,62 +262,40 @@ input:focus, select:focus, textarea:focus {{
 </style>
 """, unsafe_allow_html=True)
 
-# ================= LOGIN OVERLAY (client-side, localStorage) =================
-st.markdown("""
-<style>
-body.login-active [data-testid="stSidebar"]{display:none !important;}
-.login-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9999}
-.login-panel{width:40vw;min-width:320px;background:#ffffff;color:#000000;border-radius:10px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,0.6);}
-.login-panel h2{margin:0 0 12px 0;font-size:1.4rem}
-.login-field{width:100%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #d1d1d1}
-.login-btn{background:#000000;color:#ffffff;padding:10px 14px;border-radius:6px;border:none;font-weight:600;cursor:pointer}
-.login-btn.secondary{background:#666;color:#fff}
-</style>
+# ================= SERVER-SIDE LOGIN (blocks app until signed in) =================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.user = {}
 
-<div id="loginOverlay" class="login-overlay">
-    <div class="login-panel" role="dialog" aria-labelledby="loginTitle">
-        <h2 id="loginTitle">Sign in to continue</h2>
-        <input id="dt_email" class="login-field" placeholder="Email" type="email" aria-label="Email" />
-        <input id="dt_password" class="login-field" placeholder="Password" type="password" aria-label="Password" />
-        <input id="dt_role" class="login-field" placeholder="Role (e.g., Engineer)" type="text" aria-label="Role" />
-        <div style="display:flex;gap:12px;margin-top:12px;justify-content:flex-end">
-            <button class="login-btn secondary" id="dt_cancel">Clear</button>
-            <button class="login-btn" id="dt_login">Login</button>
-        </div>
-    </div>
-</div>
+if not st.session_state.logged_in:
+    cols = st.columns([1, 2, 1])
+    with cols[1]:
+        st.markdown("""
+        <div style='max-width:560px;margin:64px auto;padding:24px;background:#1a1a1a;border-radius:12px'>
+        <h2 style='color:#fafafa;margin-top:0;'>Please sign in</h2>
+        <p style='color:#a3a3a3;margin-top:0;margin-bottom:12px;'>Enter your email, password, and role to continue.</p>
+        """, unsafe_allow_html=True)
 
-<script>
-(function(){
-    function show(){ document.body.classList.add('login-active'); document.getElementById('loginOverlay').style.display='flex'; }
-    function hide(){ document.body.classList.remove('login-active'); document.getElementById('loginOverlay').style.display='none'; }
+        with st.form("login_form"):
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            role = st.text_input("Role")
+            submitted = st.form_submit_button("Log in")
+            if submitted:
+                st.session_state.user = {"email": email, "role": role}
+                st.session_state.logged_in = True
+                if hasattr(st, "experimental_rerun"):
+                    st.experimental_rerun()
+                else:
                     try:
-                        import time
-                        st.query_params = {"_login": str(int(time.time()))}
+                        set_query_params(_login=str(datetime.now().timestamp()))
                     except Exception:
                         pass
-    var loginBtn = document.getElementById('dt_login');
-    var cancelBtn = document.getElementById('dt_cancel');
-    if(loginBtn){
-        loginBtn.addEventListener('click', function(){
-            var email=document.getElementById('dt_email').value||'';
-            var password=document.getElementById('dt_password').value||'';
-            var role=document.getElementById('dt_role').value||'';
-            var payload={email:email,password:password,role:role,ts:new Date().toISOString()};
-            try{ localStorage.setItem('dt_user', JSON.stringify(payload)); }catch(e){console.warn(e)}
-            hide();
-        });
-    }
-    if(cancelBtn){
-        cancelBtn.addEventListener('click', function(){
-            document.getElementById('dt_email').value='';
-            document.getElementById('dt_password').value='';
-            document.getElementById('dt_role').value='';
-        });
-    }
-})();
-</script>
-""", unsafe_allow_html=True)
+
+        st.markdown("""
+        </div>
+        """, unsafe_allow_html=True)
+    st.stop()
 
 # ================= SIDEBAR =================
 with st.sidebar:

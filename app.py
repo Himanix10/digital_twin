@@ -24,6 +24,32 @@ from models.linear_model import run_linear_regression
 from models.random_forest import run_random_forest
 from models.lstm_model import run_lstm
 from models.autoencoder import run_autoencoder
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import json
+import base64
+from datetime import datetime
+from io import BytesIO
+
+import tensorflow as tf
+tf.config.threading.set_intra_op_parallelism_threads(1)
+tf.config.threading.set_inter_op_parallelism_threads(1)
+
+from sklearn.preprocessing import MinMaxScaler
+
+from utils.data_quality import compute_data_quality
+from utils.fusion import fuse_sensors
+from utils.anomaly import compute_anomalies_and_health
+
+from models.linear_model import run_linear_regression
+from models.random_forest import run_random_forest
+from models.lstm_model import run_lstm
+from models.autoencoder import run_autoencoder
 
 # ================= PAGE CONFIG =================
 st.set_page_config(
@@ -37,116 +63,263 @@ if "theme" not in st.session_state:
     st.session_state.theme = "dark"
 
 DARK = st.session_state.theme == "dark"
-
-BG = "#0f172a" if DARK else "#ffffff"
-CARD = "#1e293b" if DARK else "#f8fafc"
-TEXT = "#f1f5f9" if DARK else "#0f172a"
-MUTED = "#94a3b8" if DARK else "#475569"
-ACCENT = "#3b82f6"
-SUCCESS = "#10b981"
-WARNING = "#f59e0b"
-CRITICAL = "#ef4444"
+BG = "#0a0a0a" 
+CARD = "#1a1a1a"
+TEXT = "#fafafa" 
+MUTED = "#a3a3a3"
+ACCENT = "#fafafa" 
+SUCCESS = "#fafafa"
+WARNING = "#fafafa"
+CRITICAL = "#fafafa"
 
 # ================= CSS (POP + GLOW RESTORED) =================
 st.markdown(f"""
 <style>
+:root {{
+  --bg: {BG};
+  --card: {CARD};
+  --text: {TEXT};
+  --muted: {MUTED};
+  --accent: {ACCENT};
+  --border: rgba(16,24,40,0.06);
+}}
 .stApp {{
-    background:{BG};
-    color:{TEXT};
+    background:var(--bg);
+    color:var(--text);
+    font-family: Inter, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    padding:18px 22px;
+}}
+
+/* Sidebar container (target core attribute) */
+[data-testid="stSidebar"] > div:first-child {{
+    background: #1a1a1a;
+    border-right: 1px solid #333;
+    padding: 24px;
+    color: #fafafa;
+}}
+
+/* File uploader refinement */
+div[data-testid="stFileUploader"] > div {{
+    background: #1a1a1a;
+    border-radius: 8px;
+    border: 1px dashed #555;
+    color: #fafafa;
+}}
+
+div[data-testid="stFileUploader"] button {{
+    background: #fafafa;
+    color: #0a0a0a;
+    border: none;
+    border-radius: 8px;
+}}
+
+/* Form element tweaks */
+.stSelectbox, .stRadio {{
+    color: #fafafa;
+}}
+
+select, .stSelectbox select, .stMultiselect select {{
+    background: #1a1a1a;
+    border: 1px solid #555;
+    color: #fafafa;
+    padding: 8px 10px;
+    border-radius: 8px;
+}}
+
+/* Slider (range) styling */
+input[type="range"] {{
+    -webkit-appearance: none;
+    height: 4px;
+    background: #555;
+    border-radius: 4px;
+}}
+input[type="range"]::-webkit-slider-thumb {{
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fafafa;
+    box-shadow: 0 0 8px rgba(250, 250, 250, 0.3);
+    margin-top: -7px;
+}}
+
+/* Header/title styling */
+.section h1 {{
+    font-size: 2.8rem;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+    color: var(--text);
+}}
+.section p {{
+    color: var(--muted);
+    margin-top: 0;
+    font-size: 1.1rem;
 }}
 
 .section {{
-    background:{CARD};
-    border:1px solid #334155;
-    border-radius:14px;
+    background:var(--card);
+    border: 1px solid #333;
+    border-radius:12px;
     padding:1.6rem;
-    margin-bottom:1.6rem;
-    transition: all .25s ease;
+    margin-bottom:1.2rem;
+    box-shadow: none;
 }}
 
 .section:hover {{
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(59,130,246,.18);
-    border-color:{ACCENT};
+    transform: none;
+    box-shadow: none;
+    border-color: #777;
 }}
 
 .kpi {{
-    background:{CARD};
-    border:1px solid #334155;
-    border-radius:12px;
+    background: transparent;
+    border: 1px solid #333;
+    border-radius:10px;
     padding:1.2rem;
-    transition: all .25s ease;
 }}
 
 .kpi:hover {{
-    transform: scale(1.03);
-    box-shadow: 0 0 25px rgba(59,130,246,.35);
-    border-color:{ACCENT};
+    transform: none;
+    box-shadow: none;
+    border-color: #777;
 }}
 
 .kpi-value {{
-    font-size:2rem;
-    font-weight:700;
+    font-size: 2.2rem;
+    font-weight:600;
+    color:var(--text);
 }}
 
 .health-glow {{
-    animation: pulse 1.8s infinite;
-}}
-
-@keyframes pulse {{
-    0% {{ box-shadow: 0 0 10px rgba(239,68,68,.4); }}
-    50% {{ box-shadow: 0 0 30px rgba(239,68,68,.8); }}
-    100% {{ box-shadow: 0 0 10px rgba(239,68,68,.4); }}
+    border-color: #fafafa;
 }}
 
 .stButton>button {{
-    background:{ACCENT};
-    color:white;
-    border-radius:10px;
-    padding:.7rem 1.4rem;
-    font-weight:600;
-    transition: all .2s ease;
+    background: #fafafa;
+    color: #0a0a0a;
+    border-radius:8px;
+    padding:.65rem 1.1rem;
+    font-weight:700;
+    border:none;
 }}
 
 .stButton>button:hover {{
-    transform: scale(1.05);
-    box-shadow: 0 0 20px rgba(59,130,246,.6);
+    transform: scale(1.02);
+    box-shadow: none;
 }}
 
-input, select {{
-    transition: all .2s ease;
+.download-btn {{
+    display:inline-block;
+    background: #fafafa;
+    color: #0a0a0a;
+    padding:.6rem 1rem;
+    border-radius:8px;
+    text-decoration:none;
+    font-weight:700;
 }}
 
-input:focus, select:focus {{
-    box-shadow: 0 0 15px rgba(59,130,246,.6);
-    border-color:{ACCENT};
+input, select, textarea {{
+    transition: all .18s ease;
+    border-radius:8px;
+    border: 1px solid #555;
+    background: #1a1a1a;
+    color: #fafafa;
+}}
+
+input:focus, select:focus, textarea:focus {{
+    box-shadow: none;
+    border-color: #fafafa;
+}}
+
+/* Responsive tweaks for charts */
+@media (max-width: 900px) {{
+  .kpi-value {{ font-size:1.6rem; }}
+  .section {{ padding:1.2rem; }}
 }}
 </style>
+""", unsafe_allow_html=True)
+
+# ================= LOGIN OVERLAY (client-side, localStorage) =================
+st.markdown("""
+<style>
+body.login-active [data-testid="stSidebar"]{display:none !important;}
+.login-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9999}
+.login-panel{width:40vw;min-width:320px;background:#ffffff;color:#000000;border-radius:10px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,0.6);}
+.login-panel h2{margin:0 0 12px 0;font-size:1.4rem}
+.login-field{width:100%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #d1d1d1}
+.login-btn{background:#000000;color:#ffffff;padding:10px 14px;border-radius:6px;border:none;font-weight:600;cursor:pointer}
+.login-btn.secondary{background:#666;color:#fff}
+</style>
+
+<div id="loginOverlay" class="login-overlay">
+    <div class="login-panel" role="dialog" aria-labelledby="loginTitle">
+        <h2 id="loginTitle">Sign in to continue</h2>
+        <input id="dt_email" class="login-field" placeholder="Email" type="email" aria-label="Email" />
+        <input id="dt_password" class="login-field" placeholder="Password" type="password" aria-label="Password" />
+        <input id="dt_role" class="login-field" placeholder="Role (e.g., Engineer)" type="text" aria-label="Role" />
+        <div style="display:flex;gap:12px;margin-top:12px;justify-content:flex-end">
+            <button class="login-btn secondary" id="dt_cancel">Clear</button>
+            <button class="login-btn" id="dt_login">Login</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    function show(){ document.body.classList.add('login-active'); document.getElementById('loginOverlay').style.display='flex'; }
+    function hide(){ document.body.classList.remove('login-active'); document.getElementById('loginOverlay').style.display='none'; }
+                    try:
+                        import time
+                        st.query_params = {"_login": str(int(time.time()))}
+                    except Exception:
+                        pass
+    var loginBtn = document.getElementById('dt_login');
+    var cancelBtn = document.getElementById('dt_cancel');
+    if(loginBtn){
+        loginBtn.addEventListener('click', function(){
+            var email=document.getElementById('dt_email').value||'';
+            var password=document.getElementById('dt_password').value||'';
+            var role=document.getElementById('dt_role').value||'';
+            var payload={email:email,password:password,role:role,ts:new Date().toISOString()};
+            try{ localStorage.setItem('dt_user', JSON.stringify(payload)); }catch(e){console.warn(e)}
+            hide();
+        });
+    }
+    if(cancelBtn){
+        cancelBtn.addEventListener('click', function(){
+            document.getElementById('dt_email').value='';
+            document.getElementById('dt_password').value='';
+            document.getElementById('dt_role').value='';
+        });
+    }
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # ================= SIDEBAR =================
 with st.sidebar:
     st.markdown("## ⚙️ Controls")
+    st.markdown("<div style='color:#fafafa; font-size:14px; margin-bottom:12px'>Configure data & model parameters</div>", unsafe_allow_html=True)
+    
+    st.markdown("#### Data")
+    data_mode = st.radio("Data Source", ["Upload CSV Dataset", "Simulated Data"], label_visibility="collapsed")
+    
+    st.markdown("#### Model")
+    model_type = st.selectbox("Model", ["Linear Regression", "Random Forest", "LSTM", "Autoencoder"], label_visibility="collapsed")
 
-    if st.button("🌗 Toggle Theme"):
-        st.session_state.theme = "light" if DARK else "dark"
-        st.rerun()
-
-    st.divider()
-
-    data_mode = st.radio("Data Source", ["Upload CSV Dataset", "Simulated Data"])
-    model_type = st.selectbox("Model", ["Linear Regression", "Random Forest", "LSTM", "Autoencoder"])
-
+    st.markdown("#### Prediction")
     prediction_horizon = st.slider(
         "Prediction Horizon",
         1, 50, 10,
         disabled=(model_type == "Autoencoder")
     )
 
+    st.markdown("#### Health & Anomaly")
     health_threshold = st.slider("Health Threshold (%)", 50, 95, 75)
     anomaly_limit = st.slider("Anomaly Limit", 1, 50, 10)
 
-    report_format = st.selectbox("Download Format", ["CSV", "JSON", "Text"])
+    st.markdown("#### Download")
+    report_format = st.selectbox("Download Format", ["CSV", "JSON", "Text"], label_visibility="collapsed")
 
 # ================= HEADER =================
 st.markdown("""
@@ -272,8 +445,8 @@ else:
 
 b64 = base64.b64encode(buffer.getvalue()).decode()
 st.markdown(f"""
-<a href="data:application/octet-stream;base64,{b64}" download="digital_twin_report.{report_format.lower()}">
-<button>⬇️ Download Report</button>
+<a class="download-btn" href="data:application/octet-stream;base64,{b64}" download="digital_twin_report.{report_format.lower()}">
+⬇️ Download Report
 </a>
 """, unsafe_allow_html=True)
 

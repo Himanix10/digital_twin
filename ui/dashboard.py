@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from ai.explainer import generate_explanation
 from sklearn.preprocessing import MinMaxScaler
 
 from ui.sidebar import render_sidebar
@@ -15,6 +16,8 @@ from models.linear_model import run_linear_regression
 from models.random_forest import run_random_forest
 from models.lstm_model import run_lstm
 from models.autoencoder import run_autoencoder
+
+from ai.chatbot import chatbot_response
 
 def render_dashboard():
     data_mode, model_type, horizon, health_threshold, anomaly_limit, report_format = render_sidebar()
@@ -125,6 +128,8 @@ def render_dashboard():
         actual, predicted = run_autoencoder(fused, scaler)
 
     anomalies, error, health = compute_anomalies_and_health(actual, predicted)
+    error_value = float(np.mean(error))
+    anomaly_count = len(anomalies)
     health = float(np.mean(health))
 
     if health < health_threshold or len(anomalies) > anomaly_limit:
@@ -144,7 +149,7 @@ def render_dashboard():
 
         st.subheader("System Health & Forecast")
 
-        cols = st.columns(3, gap="medium", vertical_alignment="center")
+        cols = st.columns(3, gap="medium")
 
         # Health Score
         with cols[0]:
@@ -184,19 +189,44 @@ def render_dashboard():
 
     # Report download
     render_report_download(model_type, health, status, anomalies, horizon, report_format)
-from ai.chatbot import chatbot_response
 
-st.markdown("### AI Assistant")
+    # ────────────────────────────────────────────────────────────────
+    #   AI ASSISTANT & EXPLAINER (Inside Dashboard Function)
+    # ────────────────────────────────────────────────────────────────
+    st.markdown("### AI Assistant")
+    user_query = st.text_input("Ask about system status")
 
-user_query = st.text_input("Ask about system status")
+    if user_query:
+        reply = chatbot_response(
+            user_query,
+            health,
+            len(anomalies),
+            dq["noise"],
+            status
+        )
+        st.write(reply)
 
-if user_query:
-    reply = chatbot_response(
-        user_query,
-        health,
-        len(anomalies),
-        dq["noise"],
-        status
-    )
-    st.write(reply)
+    with st.container():
+        st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
+        st.subheader("AI System Explanation")
 
+        if st.button("Generate AI Explanation"):
+            prompt = f"""
+            System Health: {health:.2f}%
+            Model Used: {model_type}
+            Total Anomalies: {anomaly_count}
+            Prediction Horizon: {horizon}
+            Mean Error: {error_value:.4f}
+
+            Explain system condition and suggest corrective measures.
+            """
+
+            with st.spinner("AI analyzing system state..."):
+                explanation = generate_explanation(prompt)
+
+            st.write(explanation)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    render_dashboard()

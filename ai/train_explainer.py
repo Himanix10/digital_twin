@@ -1,14 +1,15 @@
 import json
 import torch
 from torch.utils.data import Dataset, DataLoader
-import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from torch.optim import AdamW
 import os
 
 MODEL_NAME = "distilgpt2"
-SAVE_PATH = "ai/model"
+SAVE_PATH = "ai/fine_tuned_model"
 
+
+# ================= Dataset =================
 class TwinDataset(Dataset):
 
     def __init__(self, data, tokenizer, max_len=256):
@@ -21,6 +22,7 @@ class TwinDataset(Dataset):
 
     def __getitem__(self, idx):
         sample = self.data[idx]
+
         text = sample["input"] + "\nExplanation:\n" + sample["output"]
 
         encoding = self.tokenizer(
@@ -38,18 +40,24 @@ class TwinDataset(Dataset):
         }
 
 
+# ================= Training =================
 def train():
 
-    with open("ai/training_data.json") as f:
+    # Load training data
+    with open("ai/training_data.json", "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     tokenizer.pad_token = tokenizer.eos_token
 
+    # Create dataset
     dataset = TwinDataset(data, tokenizer)
     loader = DataLoader(dataset, batch_size=4, shuffle=True)
 
+    # Load base model
     model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
+
     optimizer = AdamW(model.parameters(), lr=5e-5)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -57,7 +65,10 @@ def train():
 
     model.train()
 
+    # Training loop
     for epoch in range(2):
+        total_loss = 0
+
         for batch in loader:
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
@@ -70,17 +81,24 @@ def train():
             )
 
             loss = outputs.loss
+            total_loss += loss.item()
+
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
 
-        print(f"Epoch {epoch+1} completed.")
+        avg_loss = total_loss / len(loader)
+        print(f"Epoch {epoch+1} completed. Avg Loss: {avg_loss:.4f}")
 
+    # ================= SAVE MODEL =================
     os.makedirs(SAVE_PATH, exist_ok=True)
+
     model.save_pretrained(SAVE_PATH)
     tokenizer.save_pretrained(SAVE_PATH)
 
-    print("Model training completed.")
+    print("Model saved successfully to:", SAVE_PATH)
 
+
+# ================= Run =================
 if __name__ == "__main__":
     train()

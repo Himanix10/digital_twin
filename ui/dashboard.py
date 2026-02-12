@@ -184,3 +184,19 @@ def render_dashboard():
 
     # Report download
     render_report_download(model_type, health, status, anomalies, horizon, report_format)
+from ai.chatbot import chatbot_response
+
+st.markdown("### AI Assistant")
+
+user_query = st.text_input("Ask about system status")
+
+if user_query:
+    reply = chatbot_response(
+        user_query,
+        health,
+        len(anomalies),
+        dq["noise"],
+        status
+    )
+    st.write(reply)
+

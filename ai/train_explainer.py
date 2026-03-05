@@ -66,7 +66,7 @@ def train():
     model.train()
 
     # Training loop
-    for epoch in range(2):
+    for epoch in range(5):
         total_loss = 0
 
         for batch in loader:

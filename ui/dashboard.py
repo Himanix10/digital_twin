@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from ai.explainer import generate_explanation
 from sklearn.preprocessing import MinMaxScaler
 
 from ui.sidebar import render_sidebar
@@ -16,8 +15,8 @@ from models.linear_model import run_linear_regression
 from models.random_forest import run_random_forest
 from models.lstm_model import run_lstm
 from models.autoencoder import run_autoencoder
+from ai.explainer import generate_explanation
 
-from ai.chatbot import chatbot_response
 
 def render_dashboard():
     data_mode, model_type, horizon, health_threshold, anomaly_limit, report_format = render_sidebar()
@@ -25,12 +24,7 @@ def render_dashboard():
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
 
     st.markdown("""
-    <h1 style='
-        font-size: 2.9rem;
-        font-weight: 800;
-        letter-spacing: -1px;
-        margin-bottom: 0.5rem;
-    '>
+    <h1 style='font-size: 2.9rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 0.5rem;'>
         Digital Twin Control Center
     </h1>
     <p style='color:#cbd5e1; font-size:1.15rem; margin-bottom:2.2rem;'>
@@ -38,18 +32,12 @@ def render_dashboard():
     </p>
     """, unsafe_allow_html=True)
 
-    # ────────────────────────────────────────────────────────────────
-    #   DATA INPUT SECTION
-    # ────────────────────────────────────────────────────────────────
+    # ───────────────── DATA INPUT ─────────────────
     with st.container():
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
 
         if data_mode == "Upload CSV Dataset":
-            file = st.file_uploader(
-                "Upload time-series CSV",
-                type=["csv"],
-                help="Expected format: timestamp + numeric sensor columns"
-            )
+            file = st.file_uploader("Upload time-series CSV", type=["csv"])
             if file is not None:
                 df = pd.read_csv(file)
             else:
@@ -73,17 +61,14 @@ def render_dashboard():
     sensors = st.multiselect(
         "Sensors to monitor",
         options=list(numeric_df.columns),
-        default=list(numeric_df.columns[:min(3, len(numeric_df.columns))]),
-        key="sensors_multiselect"
+        default=list(numeric_df.columns[:min(3, len(numeric_df.columns))])
     )
 
     if not sensors:
-        st.warning("Please select at least one sensor to continue.")
+        st.warning("Please select at least one sensor.")
         return
 
-    # ────────────────────────────────────────────────────────────────
-    #   DATA QUALITY
-    # ────────────────────────────────────────────────────────────────
+    # ───────────────── DATA QUALITY ─────────────────
     dq = compute_data_quality(numeric_df, sensors)
 
     with st.container():
@@ -91,10 +76,9 @@ def render_dashboard():
         st.subheader("Data Quality Assessment")
 
         cols = st.columns(4)
-
         metrics = [
             (f"{dq['missing_pct']:.1f}%", "Missing"),
-            (f"{dq['noise']:.2e}",       "Noise"),
+            (f"{dq['noise']:.2f}", "Noise"),
             (f"{dq['outlier_pct']:.1f}%", "Outliers"),
             (f"{dq['quality_score']:.1f}%", "Quality Score")
         ]
@@ -110,9 +94,7 @@ def render_dashboard():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ────────────────────────────────────────────────────────────────
-    #   MODEL + ANOMALY COMPUTATION
-    # ────────────────────────────────────────────────────────────────
+    # ───────────────── MODEL COMPUTATION ─────────────────
     fused = fuse_sensors(dq["filled_df"], sensors)
     scaler = MinMaxScaler()
 
@@ -128,11 +110,12 @@ def render_dashboard():
         actual, predicted = run_autoencoder(fused, scaler)
 
     anomalies, error, health = compute_anomalies_and_health(actual, predicted)
+
     error_value = float(np.mean(error))
     anomaly_count = len(anomalies)
     health = float(np.mean(health))
 
-    if health < health_threshold or len(anomalies) > anomaly_limit:
+    if health < health_threshold or anomaly_count > anomaly_limit:
         status = "Critical"
     elif health < health_threshold + 10:
         status = "Warning"
@@ -141,92 +124,63 @@ def render_dashboard():
 
     future = np.full(horizon, predicted[-1])
 
-    # ────────────────────────────────────────────────────────────────
-    #   SYSTEM HEALTH OVERVIEW – ALIGNED VERSION
-    # ────────────────────────────────────────────────────────────────
+    # ───────────────── SYSTEM OVERVIEW ─────────────────
     with st.container():
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-
         st.subheader("System Health & Forecast")
 
-        cols = st.columns(3, gap="medium")
+        cols = st.columns(3)
 
-        # Health Score
         with cols[0]:
-            st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-value-visible">{health:.1f}%</div>
-                <div class="metric-label">Health Score</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.metric("Health Score", f"{health:.1f}%")
 
-        # Status (centered)
         with cols[1]:
-            st.markdown(f"""
-            <div class="metric-container">
-                <div class="status-pill status-{status.lower()}" style="margin-bottom: 1rem;">{status}</div>
-                <div class="metric-label">Current Status</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.metric("Status", status)
 
-        # Anomalies
         with cols[2]:
-            st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-value-visible">{len(anomalies)}</div>
-                <div class="metric-label">Detected Anomalies</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("<div style='height: 2rem;'></div>", unsafe_allow_html=True)
-
-        st.caption(f"**Model** • {model_type}  **•**  **Prediction Horizon** • {horizon} steps")
+            st.metric("Detected Anomalies", anomaly_count)
 
         fig = plot_system(actual, predicted, anomalies, future)
         st.pyplot(fig, use_container_width=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Report download
     render_report_download(model_type, health, status, anomalies, horizon, report_format)
 
-    # ────────────────────────────────────────────────────────────────
-    #   AI ASSISTANT & EXPLAINER (Inside Dashboard Function)
-    # ────────────────────────────────────────────────────────────────
-    st.markdown("### AI Assistant")
-    user_query = st.text_input("Ask about system status")
+    # ───────────────── AI ASSISTANT ─────────────────
+   # st.markdown("### AI Assistant")
+    #user_query = st.text_input("Ask about system status")
 
-    if user_query:
-        reply = chatbot_response(
-            user_query,
-            health,
-            len(anomalies),
-            dq["noise"],
-            status
-        )
-        st.write(reply)
+   # if user_query:
+    #    reply = chatbot_response(
+     #       user_query,
+      #      health,
+       #     anomaly_count,
+        #    dq["noise"],
+          #  status
+        #)
+        #st.write(reply)
 
+    # ───────────────── AI EXPLAINER (HYBRID) ─────────────────
     with st.container():
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
         st.subheader("AI System Explanation")
 
         if st.button("Generate AI Explanation"):
-            prompt = f"""
-            System Health: {health:.2f}%
-            Model Used: {model_type}
-            Total Anomalies: {anomaly_count}
-            Prediction Horizon: {horizon}
-            Mean Error: {error_value:.4f}
 
-            Explain system condition and suggest corrective measures.
+            hybrid_prompt = f"""
+            health:{int(health)}
+            anomalies:{anomaly_count}
+            noise:{int(dq['noise'])}
             """
 
             with st.spinner("AI analyzing system state..."):
-                explanation = generate_explanation(prompt)
+                explanation = generate_explanation(hybrid_prompt)
 
-            st.write(explanation)
+            st.text_area("AI Explanation Output", explanation, height=250)
 
         st.markdown("</div>", unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     render_dashboard()

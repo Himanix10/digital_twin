@@ -11,3 +11,6 @@ __pycache__/
 
 users.json
 
+ai/fine_tuned_model/
+*.safetensors
+*.pt

@@ -1,3 +1,11 @@
+import tensorflow as tf
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    tf.config.experimental.set_memory_growth(gpus[0], True)
+else:
+    import os
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    physical_devices = tf.config.list_physical_devices('CPU')
 import numpy as np
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Input

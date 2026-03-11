@@ -10,5 +10,4 @@ __pycache__/
 .env
 
 users.json
-ai/fine_tuned_model/
-*.safetensors
+

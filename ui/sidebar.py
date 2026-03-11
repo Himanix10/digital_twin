@@ -1,8 +1,13 @@
+#sidebar.py
 import streamlit as st
 
 def render_sidebar():
     with st.sidebar:
         # ── User Section ─────────────────────────────────────────────────────
+        user = st.session_state.get('user') or {}
+        username = user.get('username', '—')
+        role = user.get('role', '—')
+
         st.markdown(
             """
             <div style="
@@ -19,10 +24,7 @@ def render_sidebar():
                     {role}
                 </div>
             </div>
-            """.format(
-                username=st.session_state.user.get('username', '—'),
-                role=st.session_state.user.get('role', '—')
-            ),
+            """.format(username=username, role=role),
             unsafe_allow_html=True
         )
 
@@ -39,7 +41,6 @@ def render_sidebar():
             unsafe_allow_html=True
         )
 
-        # Data Source – Radio
         data_mode = st.radio(
             label="**Data Source**",
             options=["Upload CSV Dataset", "Simulated Data"],
@@ -48,14 +49,12 @@ def render_sidebar():
             captions=["Upload your own CSV file", "Use generated example data"]
         )
 
-        # Model – Selectbox
         model_type = st.selectbox(
             "**Prediction Model**",
-            options=["Linear Regression", "Random Forest", "LSTM", "Autoencoder"],
+            options=["Linear Regression", "Random Forest"],
             key="model_type"
         )
 
-        # Sliders – with clearer labels
         prediction_horizon = st.slider(
             "**Prediction Horizon (steps)**",
             min_value=1,
@@ -86,7 +85,6 @@ def render_sidebar():
             format="%d"
         )
 
-        # Report Format – Selectbox
         report_format = st.selectbox(
             "**Report Format**",
             options=["CSV", "JSON", "Text"],

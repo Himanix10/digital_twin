@@ -53,11 +53,11 @@ def render_auth():
         """, unsafe_allow_html=True)
 
         mode = st.radio(
-            label="",
+            label="Authentication Mode",
             options=["Login", "Register"],
             horizontal=True,
             label_visibility="collapsed",
-            key="auth_mode"
+            key="auth_mode_radio"
         )
 
         with st.form(key="auth_form", clear_on_submit=True):

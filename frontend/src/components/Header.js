@@ -1,9 +1,19 @@
 import "../styles/dashboard.css";
+import { auth } from "../firebase";
+import { signOut } from "firebase/auth";
+
+const logout = async () => {
+  await signOut(auth);
+  window.location.reload();
+};
 
 function Header() {
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const dateStr = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
+  const now     = new Date();
+  const dateStr = now.toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric"
+  }).toUpperCase();
+
+  const user = auth.currentUser;
 
   return (
     <div className="header">
@@ -13,10 +23,16 @@ function Header() {
       </div>
       <div className="headerRight">
         <span className="headerDate">{dateStr}</span>
+        {user && (
+          <span className="headerEmail">{user.email}</span>
+        )}
         <div className="user">
           <div className="statusIndicator"></div>
           System Active
         </div>
+        <button className="logoutBtn" onClick={logout}>
+          Logout
+        </button>
       </div>
     </div>
   );

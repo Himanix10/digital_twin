@@ -805,3 +805,29 @@ body::before {
 
 .xLabel::before { content: "X —"; }
 .yLabel::before { content: "Y —"; }
+.loginPage{
+ height:100vh;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ background:#040810;
+}
+
+.loginCard{
+ background:#080f1c;
+ border:1px solid rgba(0,200,255,0.2);
+ padding:40px;
+ border-radius:12px;
+ text-align:center;
+ width:340px;
+}
+
+.googleBtn{
+ margin-top:20px;
+ padding:12px 20px;
+ background:#00c8ff;
+ border:none;
+ border-radius:8px;
+ cursor:pointer;
+ font-weight:bold;
+}

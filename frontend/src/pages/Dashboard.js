@@ -1,5 +1,6 @@
 import { runModel, explainAI, uploadCSV, previewCSV } from "../services/api";
 import { useState, useEffect } from "react";
+import { useModelContext } from "../context/ModelContext";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -38,6 +39,8 @@ function Dashboard() {
   const [csvSensors, setCsvSensors]           = useState([]);
   const [selectedSensors, setSelectedSensors] = useState([]);
   const [apiError, setApiError]               = useState("");
+
+  const { setLastRun } = useModelContext();
 
   const extractError = (err) => {
     if (err.response?.data?.detail) return err.response.data.detail;
@@ -111,6 +114,14 @@ function Dashboard() {
       }
 
       setResult(data);
+
+      setLastRun({
+        sensors:   data.sensors_used || selectedSensors,
+        model:     model,
+        anomalies: data.anomalies.length,
+        health:    data.health,
+      });
+
       setChartData(
         data.actual.map((value, index) => ({
           index,

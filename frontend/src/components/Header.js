@@ -1,11 +1,5 @@
 import "../styles/dashboard.css";
 import { auth } from "../firebase";
-import { signOut } from "firebase/auth";
-
-const logout = async () => {
-  await signOut(auth);
-  window.location.reload();
-};
 
 function Header() {
   const now     = new Date();
@@ -15,6 +9,12 @@ function Header() {
 
   const user = auth.currentUser;
 
+  const hour = now.getHours();
+  const greeting =
+    hour < 12 ? "Good Morning" :
+    hour < 18 ? "Good Afternoon" :
+                "Good Evening";
+
   return (
     <div className="header">
       <div className="headerLeft">
@@ -23,16 +23,12 @@ function Header() {
       </div>
       <div className="headerRight">
         <span className="headerDate">{dateStr}</span>
-        {user && (
-          <span className="headerEmail">{user.email}</span>
-        )}
         <div className="user">
           <div className="statusIndicator"></div>
-          System Active
+          {user
+            ? `${greeting}, ${user.displayName || user.email}`
+            : "System Active"}
         </div>
-        <button className="logoutBtn" onClick={logout}>
-          Logout
-        </button>
       </div>
     </div>
   );

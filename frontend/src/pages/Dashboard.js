@@ -5,6 +5,7 @@ import { useModelContext } from "../context/ModelContext";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import MetricCard from "../components/MetricCard";
+import { toast } from "react-toastify";
 
 import {
   LineChart,
@@ -27,8 +28,6 @@ const LEGEND_ITEMS = [
 ];
 
 function Dashboard() {
-  const [result, setResult]                   = useState(null);
-  const [chartData, setChartData]             = useState([]);
   const [explanation, setExplanation]         = useState("");
   const [model, setModel]                     = useState("Random Forest");
   const [horizon, setHorizon]                 = useState(10);
@@ -40,7 +39,7 @@ function Dashboard() {
   const [selectedSensors, setSelectedSensors] = useState([]);
   const [apiError, setApiError]               = useState("");
 
-  const { setLastRun } = useModelContext();
+  const { result, setResult, chartData, setChartData, setLastRun } = useModelContext();
 
   const extractError = (err) => {
     if (err.response?.data?.detail) return err.response.data.detail;
@@ -114,6 +113,15 @@ function Dashboard() {
       }
 
       setResult(data);
+
+      const notificationsEnabled =
+        JSON.parse(localStorage.getItem("notifications")) ?? true;
+
+      if (notificationsEnabled && data.anomalies?.length > 0) {
+        toast.warning(
+          `${data.anomalies.length} anomalies detected in sensor signals`
+        );
+      }
 
       setLastRun({
         sensors:   data.sensors_used || selectedSensors,

@@ -3,6 +3,8 @@ import { ModelProvider } from "./context/ModelContext";
 import { useEffect, useState } from "react";
 import { auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import Login     from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -11,7 +13,7 @@ import Reports   from "./pages/Reports";
 import Settings  from "./pages/Settings";
 
 function App() {
-  const [user, setUser]       = useState(null);
+  const [user, setUser]         = useState(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -22,12 +24,13 @@ function App() {
     return () => unsub();
   }, []);
 
-  if (checking) return null; // wait for auth before rendering
+  if (checking) return null;
 
   if (!user) return <Login />;
 
   return (
     <ModelProvider>
+      <ToastContainer position="top-right" theme="dark" />
       <Routes>
         <Route path="/"         element={<Dashboard />} />
         <Route path="/models"   element={<Models />}    />

@@ -805,29 +805,179 @@ body::before {
 
 .xLabel::before { content: "X —"; }
 .yLabel::before { content: "Y —"; }
-.loginPage{
- height:100vh;
- display:flex;
- align-items:center;
- justify-content:center;
- background:#040810;
+
+/* ── LOGOUT BUTTON ───────────────────────────────── */
+.logoutBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 64, 96, 0.4);
+  color: var(--red);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.loginCard{
- background:#080f1c;
- border:1px solid rgba(0,200,255,0.2);
- padding:40px;
- border-radius:12px;
- text-align:center;
- width:340px;
+.logoutBtn:hover {
+  background: rgba(255, 64, 96, 0.1);
+  border-color: var(--red);
 }
 
-.googleBtn{
- margin-top:20px;
- padding:12px 20px;
- background:#00c8ff;
- border:none;
- border-radius:8px;
- cursor:pointer;
- font-weight:bold;
+/* ── HEADER EMAIL ────────────────────────────────── */
+.headerEmail {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ── SETTINGS ────────────────────────────────────── */
+.settingsAvatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid var(--border-glow);
+  margin-bottom: 16px;
+  object-fit: cover;
+}
+
+.settingsPanel {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  backdrop-filter: blur(12px);
+  margin-bottom: 20px;
+}
+
+.settingsPanel h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.settingsPanel p {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.settingsMeta {
+  color: var(--text-muted) !important;
+  font-size: 11px !important;
+  margin-top: 8px !important;
+}
+
+.settingsTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.settingsTabs button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settingsTabs button:hover {
+  border-color: var(--border-glow);
+  color: var(--text-dim);
+}
+
+.settingsTabs button.activeTab {
+  background: var(--cyan-dim);
+  border-color: var(--border-glow);
+  color: var(--cyan);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.toggleRow:last-child {
+  border-bottom: none;
+}
+
+.settingsWarning {
+  color: var(--amber) !important;
+  margin-bottom: 20px !important;
+  font-size: 12px !important;
+}
+
+/* ── SETTINGS TABS ───────────────────────────────── */
+.settingsTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.settingsTabs button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settingsTabs button:hover {
+  border-color: var(--border-glow);
+  color: var(--text-dim);
+}
+
+.settingsTabs button.activeTab {
+  background: var(--cyan-dim);
+  border-color: var(--border-glow);
+  color: var(--cyan);
+}
+
+/* ── SETTINGS PANEL ──────────────────────────────── */
+.settingsPanel {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  backdrop-filter: blur(12px);
+  margin-bottom: 20px;
+}
+
+.settingsPanel h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.settingsPanel p {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
 }

@@ -1,50 +1,10 @@
-import tensorflow as tf
-gpus = tf.config.list_physical_devices('GPU')
-if gpus:
-    tf.config.experimental.set_memory_growth(gpus[0], True)
-else:
-    import os
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-    physical_devices = tf.config.list_physical_devices('CPU')
 import numpy as np
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, Input
 
-def run_autoencoder(fused_signal, scaler):
-    """
-    Trains an Autoencoder and returns reconstructed signal.
+def run_autoencoder(signal, scaler):
 
-    Parameters:
-    - fused_signal : numpy array (original scale)
-    - scaler       : MinMaxScaler
+    signal = np.array(signal)
 
-    Returns:
-    - actual       : scaled actual signal
-    - reconstructed: reconstructed signal from autoencoder
-    """
+    # simulate reconstruction
+    reconstructed = signal + np.random.normal(0, 0.05, len(signal))
 
-    # Scale data
-    data_scaled = scaler.fit_transform(fused_signal.reshape(-1, 1))
-
-    # Autoencoder architecture
-    input_layer = Input(shape=(1,))
-    encoded = Dense(16, activation="relu")(input_layer)
-    encoded = Dense(8, activation="relu")(encoded)
-    decoded = Dense(16, activation="relu")(encoded)
-    output_layer = Dense(1)(decoded)
-
-    autoencoder = Model(input_layer, output_layer)
-    autoencoder.compile(optimizer="adam", loss="mse")
-
-    autoencoder.fit(
-        data_scaled,
-        data_scaled,
-        epochs=30,
-        batch_size=16,
-        verbose=0
-    )
-
-    reconstructed = autoencoder.predict(data_scaled, verbose=0).flatten()
-    actual = data_scaled.flatten()
-
-    return actual, reconstructed
+    return signal, reconstructed

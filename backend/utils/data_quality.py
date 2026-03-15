@@ -2,33 +2,37 @@ import numpy as np
 import pandas as pd
 
 def compute_data_quality(numeric_df, sensors):
-    """
-    Computes data quality metrics:
-    - Missing percentage
-    - Noise level (std)
-    - Outlier percentage
-    - Quality score
-    """
 
-    total_cells = numeric_df[sensors].size
+    numeric_df = numeric_df.copy()
 
-    # Missing values
+    numeric_df.columns = numeric_df.columns.str.strip().str.lower()
+
+    sensors = [s.strip().lower() for s in sensors]
+
+    sensors = [s for s in sensors if s in numeric_df.columns]
+
+    if len(sensors) < 2:
+        raise ValueError(f"Need at least 2 sensor columns. Available: {numeric_df.columns.tolist()}")
+
+    sensor_df = numeric_df[sensors]
+
+    total_cells = sensor_df.size
+
     missing_pct = (
-        numeric_df[sensors].isnull().sum().sum() / total_cells * 100
+        sensor_df.isnull().sum().sum() / total_cells * 100
         if total_cells > 0 else 0
     )
 
-    # Fill missing values (mean imputation)
-    filled_df = numeric_df[sensors].fillna(numeric_df[sensors].mean())
+    filled_df = sensor_df.fillna(sensor_df.mean())
 
-    # Noise level
     noise = filled_df.std().mean()
 
-    # Outlier detection (Z-score)
-    z_scores = np.abs((filled_df - filled_df.mean()) / filled_df.std())
+    std = filled_df.std().replace(0, 1)
+
+    z_scores = np.abs((filled_df - filled_df.mean()) / std)
+
     outlier_pct = (z_scores > 3).sum().sum() / total_cells * 100
 
-    # Overall data quality score
     quality_score = max(0, 100 - missing_pct - outlier_pct)
 
     return {

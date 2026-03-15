@@ -1,20 +1,12 @@
 import numpy as np
 
-def fuse_sensors(filled_df, sensors):
-    """
-    Performs mean-based multi-sensor fusion.
+def fuse_sensors(df, sensors):
 
-    Parameters:
-    - filled_df : DataFrame with cleaned sensor data
-    - sensors   : list of selected sensor columns
+    if len(sensors) == 0:
+        raise ValueError("No sensors provided for fusion")
 
-    Returns:
-    - fused_signal : numpy array representing system state
-    """
+    sensor_data = df[sensors]
 
-    if len(sensors) == 1:
-        fused_signal = filled_df[sensors[0]].values
-    else:
-        fused_signal = filled_df[sensors].mean(axis=1).values
+    fused_signal = sensor_data.mean(axis=1)
 
-    return fused_signal
+    return fused_signal.values

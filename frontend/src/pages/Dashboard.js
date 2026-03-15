@@ -120,6 +120,8 @@ function Dashboard() {
         model:     model,
         anomalies: data.anomalies.length,
         health:    data.health,
+        actual:    data.actual,
+        predicted: data.predicted,
       });
 
       setChartData(
@@ -294,7 +296,8 @@ function Dashboard() {
                 </span>
               </div>
 
-              <ResponsiveContainer width="100%" height={320}>
+              <div id="predictionChart">
+                <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={chartData} margin={{ top: 4, right: 16, left: 10, bottom: 30 }}>
                   <CartesianGrid strokeDasharray="3 3" />
 
@@ -363,6 +366,7 @@ function Dashboard() {
 
                 </LineChart>
               </ResponsiveContainer>
+              </div>
             </div>
           )}
 
